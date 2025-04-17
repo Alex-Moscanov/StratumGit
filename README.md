@@ -74,3 +74,28 @@ src/
   ├── server.mjs         # AI backend integration
 .env                    # Environment variables
 firebase.json
+
+---
+
+## 🔐 Environment Variables
+
+This project includes a `.env.example` file with real credentials to allow full feature testing, including:
+
+- Firebase Auth / Firestore / Storage
+- Anthropic Claude AI course generation
+
+> ⚠️ These keys are for demo and evaluation only.
+
+
+## 🚀 Getting Started (Run Locally)
+
+1. **Clone the repo:**
+   ```bash
+   git clone https://github.com/Alex-Moscanov/StratumGit.git
+   cd StratumGit
+   npm install
+   cp .env.example .env
+   npm run dev
+```
+> Visit [http://localhost:3000](http://localhost:3000) in your browser to get started.
+
