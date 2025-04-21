@@ -1,4 +1,3 @@
-// src/services/notificationService.js
 import { 
   collection, 
   addDoc, 
@@ -11,7 +10,9 @@ import {
   Timestamp,
   orderBy,
   limit,
-  or
+  or,
+  writeBatch,
+  setDoc
 } from "firebase/firestore";
 import { firestore } from "@/config/firebase";
 import { getOverdueTasks, markTaskNotified } from "@/services/studentTaskService";
@@ -113,6 +114,18 @@ export const getInstructorNotifications = async (instructorId, maxResults = 20) 
     const helpRequestsSnapshot = await getDocs(helpRequestsQuery);
     const helpRequestNotifications = [];
     
+    // Check which help requests have already been marked as read
+    const readHelpRequestsQuery = query(
+      collection(firestore, "virtualNotificationsRead"),
+      where("instructorId", "==", instructorId),
+      where("type", "==", "help-request")
+    );
+    const readHelpRequestsSnapshot = await getDocs(readHelpRequestsQuery);
+    const readHelpRequestIds = new Set();
+    readHelpRequestsSnapshot.forEach(doc => {
+      readHelpRequestIds.add(doc.data().originalId);
+    });
+    
     helpRequestsSnapshot.forEach(doc => {
       const data = doc.data();
       helpRequestNotifications.push({
@@ -121,7 +134,7 @@ export const getInstructorNotifications = async (instructorId, maxResults = 20) 
         message: `New help request from ${data.studentEmail || "a student"}`,
         createdAt: data.createdAt?.toDate() || new Date(),
         type: "help-request",
-        read: false,
+        read: readHelpRequestIds.has(doc.id), // Check if this help request has been marked as read
         helpRequestId: doc.id,
         studentId: data.studentId,
         courseId: data.courseId
@@ -138,6 +151,18 @@ export const getInstructorNotifications = async (instructorId, maxResults = 20) 
     const enrollmentsSnapshot = await getDocs(enrollmentsQuery);
     const enrollmentNotifications = [];
     
+    // Check which enrollments have already been marked as read
+    const readEnrollmentsQuery = query(
+      collection(firestore, "virtualNotificationsRead"),
+      where("instructorId", "==", instructorId),
+      where("type", "==", "enrollment")
+    );
+    const readEnrollmentsSnapshot = await getDocs(readEnrollmentsQuery);
+    const readEnrollmentIds = new Set();
+    readEnrollmentsSnapshot.forEach(doc => {
+      readEnrollmentIds.add(doc.data().originalId);
+    });
+    
     enrollmentsSnapshot.forEach(doc => {
       const data = doc.data();
       enrollmentNotifications.push({
@@ -146,7 +171,7 @@ export const getInstructorNotifications = async (instructorId, maxResults = 20) 
         message: `${data.email || "A student"} enrolled in a course`,
         createdAt: data.enrolledAt?.toDate() || new Date(),
         type: "enrollment",
-        read: false,
+        read: readEnrollmentIds.has(doc.id), // Check if this enrollment has been marked as read
         enrollmentId: doc.id,
         courseId: data.courseId
       });
@@ -175,17 +200,122 @@ export const getInstructorNotifications = async (instructorId, maxResults = 20) 
 export const markNotificationRead = async (notificationId) => {
   try {
     // Check if this is a real notification ID or a generated one
-    if (notificationId.startsWith('help-') || notificationId.startsWith('enrollment-')) {
-      // For generated notifications, we don't need to update anything
+    if (notificationId.startsWith('help-')) {
+      // For help request notifications, store the read status
+      const helpRequestId = notificationId.substring(5); // Remove 'help-' prefix
+      const auth = getAuth();
+      const user = auth.currentUser;
+      
+      if (!user) return;
+      
+      await setDoc(doc(firestore, "virtualNotificationsRead", `help-${helpRequestId}`), {
+        originalId: helpRequestId,
+        type: "help-request",
+        instructorId: user.uid,
+        readAt: serverTimestamp()
+      });
+      
+      return;
+    } else if (notificationId.startsWith('enrollment-')) {
+      // For enrollment notifications, store the read status
+      const enrollmentId = notificationId.substring(11); // Remove 'enrollment-' prefix
+      const auth = getAuth();
+      const user = auth.currentUser;
+      
+      if (!user) return;
+      
+      await setDoc(doc(firestore, "virtualNotificationsRead", `enrollment-${enrollmentId}`), {
+        originalId: enrollmentId,
+        type: "enrollment",
+        instructorId: user.uid,
+        readAt: serverTimestamp()
+      });
+      
       return;
     }
     
+    // For regular notifications, update the notification document
     await updateDoc(doc(firestore, "notifications", notificationId), {
       read: true,
       readAt: serverTimestamp()
     });
   } catch (error) {
     console.error("Error marking notification as read:", error);
+    throw error;
+  }
+};
+
+/**
+ * Mark all notifications as read for a user
+ * @param {Array<string>} notificationIds - Array of notification IDs to mark as read
+ * @returns {Promise<void>}
+ */
+export const markAllNotificationsRead = async (notificationIds) => {
+  try {
+    const auth = getAuth();
+    const user = auth.currentUser;
+    
+    if (!user) return;
+    
+    // Separate real notifications from virtual ones
+    const realNotificationIds = [];
+    const helpRequestIds = [];
+    const enrollmentIds = [];
+    
+    notificationIds.forEach(id => {
+      if (id.startsWith('help-')) {
+        helpRequestIds.push(id.substring(5)); // Remove 'help-' prefix
+      } else if (id.startsWith('enrollment-')) {
+        enrollmentIds.push(id.substring(11)); // Remove 'enrollment-' prefix
+      } else {
+        realNotificationIds.push(id);
+      }
+    });
+    
+    // Process real notifications
+    if (realNotificationIds.length > 0) {
+      const batch = writeBatch(firestore);
+      
+      realNotificationIds.forEach(id => {
+        const notificationRef = doc(firestore, "notifications", id);
+        batch.update(notificationRef, {
+          read: true,
+          readAt: serverTimestamp()
+        });
+      });
+      
+      await batch.commit();
+    }
+    
+    // Process help request notifications
+    const helpRequestBatch = writeBatch(firestore);
+    helpRequestIds.forEach(helpRequestId => {
+      const docId = `help-${helpRequestId}`;
+      helpRequestBatch.set(doc(firestore, "virtualNotificationsRead", docId), {
+        originalId: helpRequestId,
+        type: "help-request",
+        instructorId: user.uid,
+        readAt: serverTimestamp()
+      });
+    });
+    
+    // Process enrollment notifications
+    enrollmentIds.forEach(enrollmentId => {
+      const docId = `enrollment-${enrollmentId}`;
+      helpRequestBatch.set(doc(firestore, "virtualNotificationsRead", docId), {
+        originalId: enrollmentId,
+        type: "enrollment",
+        instructorId: user.uid,
+        readAt: serverTimestamp()
+      });
+    });
+    
+    // Commit the batch if there are any virtual notifications
+    if (helpRequestIds.length > 0 || enrollmentIds.length > 0) {
+      await helpRequestBatch.commit();
+    }
+  } catch (error) {
+    console.error("Error marking all notifications as read:", error);
     throw error;
   }
 };
@@ -268,14 +398,43 @@ export const getInstructorUnreadCount = async (instructorId) => {
     const querySnapshot = await getDocs(notificationsQuery);
     let count = querySnapshot.size;
     
-    // Also count pending help requests as unread notifications
+    // Get help requests that have been marked as read
+    const readHelpRequestsQuery = query(
+      collection(firestore, "virtualNotificationsRead"),
+      where("instructorId", "==", instructorId),
+      where("type", "==", "help-request")
+    );
+    const readHelpRequestsSnapshot = await getDocs(readHelpRequestsQuery);
+    const readHelpRequestIds = new Set();
+    readHelpRequestsSnapshot.forEach(doc => {
+      readHelpRequestIds.add(doc.data().originalId);
+    });
+    
+    // Get pending help requests
     const helpRequestsQuery = query(
       collection(firestore, "helpRequests"),
       where("status", "==", "pending")
     );
     
     const helpRequestsSnapshot = await getDocs(helpRequestsQuery);
-    count += helpRequestsSnapshot.size;
+    // Only count help requests that haven't been marked as read
+    helpRequestsSnapshot.forEach(doc => {
+      if (!readHelpRequestIds.has(doc.id)) {
+        count++;
+      }
+    });
+    
+    // Get enrollments that have been marked as read
+    const readEnrollmentsQuery = query(
+      collection(firestore, "virtualNotificationsRead"),
+      where("instructorId", "==", instructorId),
+      where("type", "==", "enrollment")
+    );
+    const readEnrollmentsSnapshot = await getDocs(readEnrollmentsQuery);
+    const readEnrollmentIds = new Set();
+    readEnrollmentsSnapshot.forEach(doc => {
+      readEnrollmentIds.add(doc.data().originalId);
+    });
     
     // Get recent enrollments from the last 24 hours
     const oneDayAgo = new Date();
@@ -287,7 +446,12 @@ export const getInstructorUnreadCount = async (instructorId) => {
     );
     
     const enrollmentsSnapshot = await getDocs(enrollmentsQuery);
-    count += enrollmentsSnapshot.size;
+    // Only count enrollments that haven't been marked as read
+    enrollmentsSnapshot.forEach(doc => {
+      if (!readEnrollmentIds.has(doc.id)) {
+        count++;
+      }
+    });
     
     return count;
   } catch (error) {
@@ -309,3 +473,6 @@ export const simulateScheduledNotifications = async () => {
     throw error;
   }
 };
+
+// Import Firebase Auth
+import { getAuth } from "firebase/auth";

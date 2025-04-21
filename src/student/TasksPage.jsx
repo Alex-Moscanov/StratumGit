@@ -1,3 +1,4 @@
+// src/student/TasksPage.jsx
 import React, { useState, useEffect } from "react";
 import { useOutletContext } from "react-router-dom";
 import { getAuth } from "firebase/auth";
@@ -6,15 +7,13 @@ import { getStudentTasks, updateStudentTaskCompletion } from "@/services/student
 import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
 import { firestore } from "@/config/firebase";
 
-
-
 export default function TasksPage() {
   const outletContext = useOutletContext();
   const [user, setUser] = useState(outletContext?.user || null);
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [filter, setFilter] = useState("all"); 
+  const [filter, setFilter] = useState("all"); // all, completed, upcoming
   const [courseNames, setCourseNames] = useState({});
 
   useEffect(() => {

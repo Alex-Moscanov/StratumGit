@@ -1,18 +1,20 @@
 import React, { useState, useEffect } from "react";
-import { getAuth, onAuthStateChanged  } from "firebase/auth";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { FiBell, FiCheck, FiAlertCircle, FiClock, FiUser, FiBookOpen } from "react-icons/fi";
-import { getInstructorNotifications, markNotificationRead } from "@/services/notificationService";
+import { getInstructorNotifications, markNotificationRead, markAllNotificationsRead } from "@/services/notificationService";
 
 const InstructorNotificationsPanel = ({ onClose }) => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [authInitialized, setAuthInitialized] = useState(false);
-
+  const [selectedNotifications, setSelectedNotifications] = useState({});
+  const [selectAll, setSelectAll] = useState(false);
 
   useEffect(() => {
     const auth = getAuth();
     
+    // Use onAuthStateChanged to properly handle authentication state
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setAuthInitialized(true);
       
@@ -35,8 +37,26 @@ const InstructorNotificationsPanel = ({ onClose }) => {
       }
     });
 
+    // Clean up the subscription when the component unmounts
     return () => unsubscribe();
   }, []);
+
+  // Effect to handle select all checkbox state
+  useEffect(() => {
+    if (selectAll) {
+      const allSelected = notifications.reduce((acc, notification) => {
+        if (!notification.read) {
+          acc[notification.id] = true;
+        }
+        return acc;
+      }, {});
+      setSelectedNotifications(allSelected);
+    } else if (Object.keys(selectedNotifications).length === notifications.filter(n => !n.read).length && 
+               Object.keys(selectedNotifications).length > 0) {
+      // If all unread notifications are manually selected, update selectAll state
+      setSelectAll(true);
+    }
+  }, [selectAll, notifications]);
 
   const handleMarkAsRead = async (notificationId) => {
     try {
@@ -48,9 +68,71 @@ const InstructorNotificationsPanel = ({ onClose }) => {
           ? { ...notification, read: true } 
           : notification
       ));
+      
+      // Remove from selected notifications
+      const updatedSelected = { ...selectedNotifications };
+      delete updatedSelected[notificationId];
+      setSelectedNotifications(updatedSelected);
+      
+      // Update selectAll state if needed
+      if (selectAll && Object.keys(updatedSelected).length < notifications.filter(n => !n.read).length - 1) {
+        setSelectAll(false);
+      }
     } catch (err) {
       console.error("Error marking notification as read:", err);
     }
+  };
+
+  const handleMarkSelectedAsRead = async () => {
+    try {
+      const selectedIds = Object.keys(selectedNotifications);
+      if (selectedIds.length === 0) return;
+      
+      // Use markAllNotificationsRead instead of individual calls
+      await markAllNotificationsRead(selectedIds);
+      
+      // Update local state for all notifications, including virtual ones
+      setNotifications(notifications.map(notification => 
+        selectedNotifications[notification.id] 
+          ? { ...notification, read: true } 
+          : notification
+      ));
+      
+      // Clear selections
+      setSelectedNotifications({});
+      setSelectAll(false);
+    } catch (err) {
+      console.error("Error marking notifications as read:", err);
+    }
+  };
+
+  const handleToggleSelectAll = () => {
+    setSelectAll(!selectAll);
+    if (!selectAll) {
+      // Select all unread notifications
+      const allSelected = notifications.reduce((acc, notification) => {
+        if (!notification.read) {
+          acc[notification.id] = true;
+        }
+        return acc;
+      }, {});
+      setSelectedNotifications(allSelected);
+    } else {
+      // Deselect all
+      setSelectedNotifications({});
+    }
+  };
+
+  const handleToggleSelect = (notificationId) => {
+    setSelectedNotifications(prev => {
+      const updated = { ...prev };
+      if (updated[notificationId]) {
+        delete updated[notificationId];
+      } else {
+        updated[notificationId] = true;
+      }
+      return updated;
+    });
   };
 
   const formatDate = (date) => {
@@ -104,6 +186,9 @@ const InstructorNotificationsPanel = ({ onClose }) => {
     }
   };
 
+  const unreadCount = notifications.filter(n => !n.read).length;
+  const selectedCount = Object.keys(selectedNotifications).length;
+
   return (
     <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg z-40 overflow-hidden">
       <div className="p-4 border-b border-gray-200">
@@ -120,8 +205,34 @@ const InstructorNotificationsPanel = ({ onClose }) => {
         </div>
       </div>
       
+      {/* Select All and Mark as Read controls */}
+      {unreadCount > 0 && (
+        <div className="px-4 py-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              id="select-all"
+              checked={selectAll}
+              onChange={handleToggleSelectAll}
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            />
+            <label htmlFor="select-all" className="ml-2 text-sm text-gray-700">
+              Select All ({unreadCount})
+            </label>
+          </div>
+          {selectedCount > 0 && (
+            <button
+              onClick={handleMarkSelectedAsRead}
+              className="text-xs text-blue-600 hover:text-blue-800 flex items-center"
+            >
+              <FiCheck className="mr-1" /> Mark {selectedCount} as read
+            </button>
+          )}
+        </div>
+      )}
+      
       <div className="max-h-96 overflow-y-auto">
-      {!authInitialized || loading ? (
+        {!authInitialized || loading ? (
           <div className="flex justify-center items-center h-32">
             <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900"></div>
           </div>
@@ -144,6 +255,16 @@ const InstructorNotificationsPanel = ({ onClose }) => {
                 className={`py-4 px-4 ${notification.read ? 'opacity-75' : 'bg-blue-50'}`}
               >
                 <div className="flex items-start">
+                  {!notification.read && (
+                    <div className="flex-shrink-0 mr-2">
+                      <input
+                        type="checkbox"
+                        checked={!!selectedNotifications[notification.id]}
+                        onChange={() => handleToggleSelect(notification.id)}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mt-1"
+                      />
+                    </div>
+                  )}
                   <div className="flex-shrink-0 mt-1">
                     {getNotificationIcon(notification.type)}
                   </div>
