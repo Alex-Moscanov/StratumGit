@@ -282,7 +282,7 @@ const HelpRequestsPage = () => {
             Pending
           </button>
           <button
-            className={`px-4 py-2 rounded ${
+            className={`px-3 py-1 rounded ${
               filter === "answered" 
                 ? "bg-blue-100 text-blue-700" 
                 : "bg-gray-100 text-gray-700 hover:bg-gray-200"
@@ -318,28 +318,28 @@ const HelpRequestsPage = () => {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="w-auto mx-auto max-w-5xl divide-y divide-gray-200">
+                <thead className="bg-gray-50">
                 <tr>
-                  <th scope="col" className="px-3 py-1 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-40">
                     Student
                   </th>
-                  <th scope="col" className="px-3 py-1 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48">
                     Course / Lesson
                   </th>
-                  <th scope="col" className="px-3 py-1 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
                     Priority
                   </th>
-                  <th scope="col" className="px-3 py-1 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
                     Status
                   </th>
-                  <th scope="col" className="px-3 py-1 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
                     Submitted
                   </th>
-                  <th scope="col" className="px-3 py-1 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-64">
                     Description
                   </th>
-                  <th scope="col" className="px-3 py-1 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-28">
                     Actions
                   </th>
                 </tr>
@@ -347,7 +347,7 @@ const HelpRequestsPage = () => {
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredRequests.map(request => (
                   <tr key={request.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
                         {getStudentName(request)}
                       </div>
@@ -355,7 +355,7 @@ const HelpRequestsPage = () => {
                         ID: {request.studentId.substring(0, 8)}...
                       </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-3 w-48">
                       <div className="text-sm font-medium text-gray-900">
                         {request.courseTitle}
                       </div>
@@ -363,27 +363,27 @@ const HelpRequestsPage = () => {
                         {request.lessonTitle}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <div className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getPriorityLabel(request.priority).color}`}>
                         {getPriorityIcon(request.priority)}
                         <span className="ml-1">{getPriorityLabel(request.priority).label}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex items-center">
                         {getStatusIcon(request.status)}
                         <span className="ml-1 text-sm text-gray-900">{getStatusText(request.status)}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                       {formatDistanceToNow(request.createdAt, { addSuffix: true })}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-3">
                       <div className="text-sm text-gray-900 max-w-xs truncate">
                         {request.question}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
                       <button
                         className={`text-blue-600 hover:text-blue-900 ${
                           request.status === "pending" ? "font-bold" : ""
