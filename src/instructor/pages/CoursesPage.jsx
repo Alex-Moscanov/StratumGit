@@ -176,7 +176,7 @@ export default function CoursesPage() {
               </div>
               
               <div className="p-6">
-                <h2 className="text-xl font-bold mb-2 line-clamp-2">{course.title}</h2>
+                <h2 className="text-xl font-bold mb-2 mt-3 line-clamp-2">{course.title}</h2>
                 <p className="text-gray-600 mb-4 line-clamp-3">{course.description}</p>
                 
                 {/* Course metadata */}
