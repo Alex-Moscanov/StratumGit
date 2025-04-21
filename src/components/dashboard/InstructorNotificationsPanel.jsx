@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { getAuth } from "firebase/auth";
+import { getAuth, onAuthStateChanged  } from "firebase/auth";
 import { FiBell, FiCheck, FiAlertCircle, FiClock, FiUser, FiBookOpen } from "react-icons/fi";
 import { getInstructorNotifications, markNotificationRead } from "@/services/notificationService";
 
@@ -7,32 +7,35 @@ const InstructorNotificationsPanel = ({ onClose }) => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [authInitialized, setAuthInitialized] = useState(false);
+
 
   useEffect(() => {
-    const fetchNotifications = async () => {
+    const auth = getAuth();
+    
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setAuthInitialized(true);
+      
+      if (!user) {
+        setError("You must be logged in to view notifications");
+        setLoading(false);
+        return;
+      }
+      
       try {
-        setLoading(true);
-        const auth = getAuth();
-        const user = auth.currentUser;
-        
-        if (!user) {
-          setError("You must be logged in to view notifications");
-          setLoading(false);
-          return;
-        }
-        
         const instructorId = user.uid;
         const notificationsData = await getInstructorNotifications(instructorId);
         setNotifications(notificationsData);
+        setError("");
       } catch (err) {
         console.error("Error fetching notifications:", err);
         setError("Failed to load notifications. Please try again later.");
       } finally {
         setLoading(false);
       }
-    };
+    });
 
-    fetchNotifications();
+    return () => unsubscribe();
   }, []);
 
   const handleMarkAsRead = async (notificationId) => {
@@ -118,7 +121,7 @@ const InstructorNotificationsPanel = ({ onClose }) => {
       </div>
       
       <div className="max-h-96 overflow-y-auto">
-        {loading ? (
+      {!authInitialized || loading ? (
           <div className="flex justify-center items-center h-32">
             <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900"></div>
           </div>
