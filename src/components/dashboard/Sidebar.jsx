@@ -7,7 +7,6 @@ import {
   FiUsers,
   FiHelpCircle,
   FiCheckCircle,
-  FiSettings,
   FiBook,
   FiUserPlus,
   FiLogOut,
@@ -65,10 +64,6 @@ export default function Sidebar() {
         <Link to="/tasks" className="flex items-center space-x-2 hover:text-gray-300">
           <FiCheckCircle />
           <span>My Tasks</span>
-        </Link>
-        <Link to="/settings" className="flex items-center space-x-2 hover:text-gray-300">
-          <FiSettings />
-          <span>Settings</span>
         </Link>
 
       </nav>
