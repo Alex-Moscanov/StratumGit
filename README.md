@@ -10,6 +10,11 @@ Stratum is a full-stack educational platform designed for online course creators
 
 ##  Getting Started (Run Locally)
 
+This project relies on a .env file that contains sensitive API keys and Firebase configuration. For security reasons, this file is not included in the repository.
+
+The .env file has been shared separately with the supervisor as part of the project submission.
+To run the application locally or build it for deployment, place the .env file in the root of the project directory.
+
 1. **Clone the repo:**
    ```bash
    git clone https://github.com/Alex-Moscanov/StratumGit.git
