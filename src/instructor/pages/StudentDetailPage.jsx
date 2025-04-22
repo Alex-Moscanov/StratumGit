@@ -162,10 +162,7 @@ const StudentDetailPage = () => {
                         {enrollment.completedLessons || 0} of {enrollment.totalLessons || 0} lessons completed
                       </div>
                       
-                      {/* Last activity information */}
-                      <div className="text-sm text-gray-600">
-                        <span className="font-medium">Last activity:</span> {enrollment.lastActivityDate ? formatDate(enrollment.lastActivityDate) : 'No recent activity'}
-                      </div>
+
                     </div>
                   </div>
                 ))}
