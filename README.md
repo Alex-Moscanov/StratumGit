@@ -10,12 +10,10 @@ Aleksejs Moscanovs, City, University of London
 To run the application locally:
 
 1. Make sure you have **Node.js** and **npm** installed.
-2. Place the provided `.env` file in the project root directory.
-3. Run the following commands in your terminal:
-   ```bash
+2. Run the following commands in your terminal:
    npm install
    npm run dev
-4. Open your browser and go to: http://localhost:3000
+3. Open your browser and go to: http://localhost:3000
 
 
 
