@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { getTaskCompletionByDay, getStudentNames } from "@/services/taskCompletionService";
-import { FiBarChart2, FiLoader, FiInfo } from "react-icons/fi";
+import { FiBarChart2, FiLoader, FiInfo, FiAlertCircle } from "react-icons/fi";
 
 const CleanTaskCompletionGraph = () => {
   const [loading, setLoading] = useState(true);
@@ -49,10 +49,11 @@ const CleanTaskCompletionGraph = () => {
   }, []);
 
   // Get color based on completion rate
-  const getBarColor = (completionRate) => {
-    if (completionRate === 100) return "bg-green-500";
-    if (completionRate > 0) return "bg-amber-400";
-    return "bg-red-500";
+  const getBarColor = (completionRate, hasTasks) => {
+    if (!hasTasks) return "bg-gray-200"; // No tasks
+    if (completionRate === 100) return "bg-green-500"; // All completed
+    if (completionRate > 0) return "bg-amber-400"; // Some completed
+    return "bg-red-500"; // None completed
   };
   
   // Format task details for tooltip
@@ -62,7 +63,7 @@ const CleanTaskCompletionGraph = () => {
     const completionText = `${day.completedTasks} of ${day.totalTasks} tasks completed (${day.completionRate}%)`;
     
     const taskDetails = day.tasks.map(task => {
-      const studentName = studentNames[task.studentId] || "Unknown Student";
+      const studentName = studentNames[task.studentId] || "Student";
       const status = task.completed ? "✓ Completed" : "❌ Incomplete";
       return `${task.title} - ${studentName} - ${status}`;
     }).join("\n");
@@ -86,7 +87,10 @@ const CleanTaskCompletionGraph = () => {
         </div>
       ) : error ? (
         <div className="h-64 flex items-center justify-center">
-          <p className="text-red-500">{error}</p>
+          <div className="flex items-center text-red-500">
+            <FiAlertCircle className="mr-2" />
+            <p>{error}</p>
+          </div>
         </div>
       ) : (
         <div className="h-64 flex flex-col relative">
@@ -112,34 +116,39 @@ const CleanTaskCompletionGraph = () => {
                 {/* Bars */}
                 <div className="absolute inset-0 flex justify-around items-end">
                   {taskData.map((day, index) => {
-                    // Only show bars for days with tasks
+                    // Check if there are tasks for this day
                     const hasTasks = day.totalTasks > 0;
                     // Use completion rate directly for height percentage
                     const heightPercent = day.completionRate;
-                    const barColor = getBarColor(day.completionRate);
+                    const barColor = getBarColor(day.completionRate, hasTasks);
                     
                     return (
                       <div 
                         key={index} 
-                        className="flex flex-col items-center justify-end h-full"
+                        className="flex flex-col items-center justify-end h-full relative"
                         style={{ width: '12%' }}
-                        onMouseEnter={() => setHoveredDay(day)}
-                        onMouseLeave={() => setHoveredDay(null)}
                       >
-                        {/* Only show bar if there are tasks */}
-                        {hasTasks ? (
-                          <div 
-                            className={`w-full ${barColor} rounded-t`}
-                            style={{ 
-                              height: `${heightPercent}%`,
-                              minHeight: heightPercent > 0 ? '4px' : '0',
-                              maxHeight: '100%'
-                            }}
-                          ></div>
-                        ) : (
-                          <div className="w-full h-0"></div>
-                        )}
-                        <p className="text-xs mt-2 text-gray-600">{day.day}</p>
+                        {/* Bar container - make this the hover target */}
+                        <div 
+                          className="w-full h-full absolute bottom-0 cursor-pointer"
+                          onMouseEnter={() => setHoveredDay(day)}
+                          onMouseLeave={() => setHoveredDay(null)}
+                        >
+                          {/* Actual bar or placeholder for zero completion */}
+                          {hasTasks ? (
+                            <div 
+                              className={`w-full ${barColor} rounded-t absolute bottom-0`}
+                              style={{ 
+                                height: heightPercent > 0 ? `${heightPercent}%` : '4px',
+                                minHeight: '4px',
+                                maxHeight: '100%'
+                              }}
+                            ></div>
+                          ) : (
+                            <div className="w-full h-0"></div>
+                          )}
+                        </div>
+                        <p className="text-xs mt-2 text-gray-600 relative z-10">{day.day}</p>
                       </div>
                     );
                   })}
@@ -150,7 +159,7 @@ const CleanTaskCompletionGraph = () => {
           
           {/* Tooltip for hovered day */}
           {hoveredDay && (
-            <div className="absolute bg-white border border-gray-200 shadow-lg rounded p-3 z-10 max-w-xs whitespace-pre-line text-sm" 
+            <div className="absolute bg-white border border-gray-200 shadow-lg rounded p-3 z-20 max-w-xs whitespace-pre-line text-sm" 
                  style={{ top: '20px', left: '50%', transform: 'translateX(-50%)' }}>
               <div className="font-semibold mb-1 flex items-center">
                 <FiInfo className="mr-1" />
