@@ -190,7 +190,7 @@ const InstructorNotificationsPanel = ({ onClose }) => {
   const selectedCount = Object.keys(selectedNotifications).length;
 
   return (
-    <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg z-40 overflow-hidden">
+    <div className=" mt-2 w-80 bg-white rounded-lg shadow-lg z-40 w-full overflow-hidden">
       <div className="p-4 border-b border-gray-200">
         <div className="flex justify-between items-center">
           <h2 className="text-lg font-medium text-gray-900">Notifications</h2>
