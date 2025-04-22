@@ -18,9 +18,6 @@ export default function LandingPage() {
           <Link to="/learn-more" className="hover:underline">
             Learn More
           </Link>
-          <Link to="/pricing" className="hover:underline">
-            Pricing
-          </Link>
         </div>
       </header>
 
